@@ -14,7 +14,7 @@ async def set_price_state(message: Message, state: FSMContext) -> None:
     await UserStatesGroup.next()
     await message.bot.send_message(
         message.from_user.id,
-        text="Write the name of a certain currency you wanna know",
+        text="Write the name of a certain currency you'd like to know",
         reply_markup=ReplyKeyboardRemove()
     )
 
@@ -22,40 +22,60 @@ async def set_price_state(message: Message, state: FSMContext) -> None:
 async def get_currency_price(message: Message, state: FSMContext) -> None:
     # TODO: check the case if it's Common log
     data = await state.get_data()
-    rq = requests.post(
-        "http://web:8000/exchanges/currency_by_name_from/",
-        json={"name": data['exchange'], "cname": message.text}
-    ).json()[data['exchange']]
-    if rq['name'] != 'Not found':
-        txt = f"{rq['name']}: {rq['price']}"
-        await message.bot.send_message(
-            message.from_user.id,
-            text=f'{txt}\n'
-                 'Select an item from the menu',
-            reply_markup=action_keyboard
-        )
+    txt = ''
+    if data['exchange'] == 'Common log':
+        for el in exchange_list[:-1]:
+            rq = requests.post(
+                "http://web:8000/exchanges/currency_by_name_from/",
+                json={"name": el, "cname": message.text}
+            ).json()[el]
+            txt += '\n' + '\n' + f"{'*' + el + '*'}\n{message.text}: {rq['price']}"
     else:
-        await message.bot.send_message(
-            message.from_user.id,
-            text='The name of a currency wasn\'t found.\n'
-                 'Select an item from the menu',
-            reply_markup=action_keyboard
-        )
+        rq = requests.post(
+            "http://web:8000/exchanges/currency_by_name_from/",
+            json={"name": data['exchange'], "cname": message.text}
+        ).json()[data['exchange']]
+        if rq['name'] != 'Not found':
+            txt = f"{rq['name']}: {rq['price']}"
+        else:
+            await message.bot.send_message(
+                message.from_user.id,
+                text='The name of a currency wasn\'t found.\n'
+                     'Select an item from the menu',
+                reply_markup=action_keyboard
+            )
+    await message.bot.send_message(
+        message.from_user.id,
+        text=f'{txt}\n'
+             'Select an item from the menu',
+        reply_markup=action_keyboard,
+        parse_mode='Markdown'
+    )
     await UserStatesGroup.item.set()
 
 
 async def list_currencies(message: Message, state: FSMContext) -> None:
-    # TODO: check the case if it's Common log
+    txt = ''
     data = await state.get_data()
-    rq = requests.post(
-        "http://web:8000/exchanges/currency_names_from/",
-        json={"name": data['exchange']}
-    ).json()[data['exchange']]
-    txt = '\n'.join(rq)
+    if data['exchange'] == 'Common log':
+        for el in exchange_list[:-1]:
+            rq = requests.post(
+                "http://web:8000/exchanges/currency_names_from/",
+                json={"name": el}
+            ).json()[el]
+            txt += '\n\n' + '*' + el + '*' + '\n' + '\n'.join(rq)
+
+    else:
+        rq = requests.post(
+            "http://web:8000/exchanges/currency_names_from/",
+            json={"name": data['exchange']}
+        ).json()[data['exchange']]
+        txt = '\n'.join(rq)
     await message.bot.send_message(
         message.from_user.id,
         text=txt,
-        reply_markup=action_keyboard
+        reply_markup=action_keyboard,
+        parse_mode='Markdown'
     )
 
 
