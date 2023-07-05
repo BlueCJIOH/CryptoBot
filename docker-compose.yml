@@ -1,0 +1,18 @@
+services:
+
+  bot:
+    image: "crypto-bot"
+    restart: always
+    build: .
+    ports:
+      - "8080:8080"
+    networks:
+      - crypto_net
+    container_name: "crypto-bot"
+    env_file:
+      - .env
+
+networks:
+  crypto_net:
+    external:
+      name: dev-network
